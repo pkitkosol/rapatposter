@@ -20,7 +20,7 @@
 <div class="field"><label for="themeBrief">ธีมโปสเตอร์ <span class="hint">สีและภาพประกอบที่ต้องการ</span></label><textarea id="themeBrief" placeholder="เช่น โทนน้ำเงินกรมท่ากับทอง ดูเป็นทางการ มีลายเส้นกราฟการเงินหรือภาพเมืองทันสมัย">โทนน้ำเงินและเขียว ดูทันสมัย สื่อถึงความรู้และวิชาชีพ</textarea><div class="hint" style="margin:6px 2px 0;display:block">พิมพ์บรีฟเป็นไทยหรืออังกฤษ ระบบแปลคำค้นและหารูปจาก Wikimedia Commons อัตโนมัติ</div></div>
 <div class="field"><label for="title">ชื่องาน</label><input id="title" type="text" placeholder="เช่น ก้าวทันมาตรฐานการขึ้นทะเบียน" value="ก้าวทันมาตรฐานการขึ้นทะเบียน" /></div>
 <div id="speakerFields"></div><button type="button" class="btn" id="addSpeakerBtn" style="margin:-2px 0 14px">＋ เพิ่มวิทยากร</button>
-<div class="field"><label for="copy">คำโฆษณา / รายละเอียดสั้น ๆ</label><textarea id="copy" placeholder="บอกจุดเด่นหรือสิ่งที่ผู้เข้าร่วมจะได้รับ">อัปเดตประเด็นสำคัญที่เภสัชกรขึ้นทะเบียนผลิตภัณฑ์ไม่ควรพลาด พร้อมแนวทางปรับใช้ได้จริง</textarea></div><div class="field"><label>ภาพประกอบที่เกี่ยวข้อง <span class="hint">ช่วยเติมพื้นที่บนโปสเตอร์</span></label><label class="upload" for="illustrationFile"><span class="upload-icon">▧</span><span class="upload-text"><b>อัปโหลดภาพประกอบ</b><small>เช่น ยา ห้องปฏิบัติการ หรือภาพที่เข้ากับธีม</small><span class="uploaded" id="illustrationUploaded"></span></span><input id="illustrationFile" type="file" accept="image/*"></label></div><div class="image-search-row"><button type="button" class="btn" id="searchImageBtn">↻ ค้นหารูปใหม่</button><span id="imageSearchStatus" class="image-search-status" role="status" aria-live="polite">พิมพ์บรีฟภาพในธีม ระบบจะค้นหารูปที่ตรงให้โดยอัตโนมัติ</span></div>
+<div class="field"><label for="copy">คำโฆษณา / รายละเอียดสั้น ๆ</label><textarea id="copy" placeholder="บอกจุดเด่นหรือสิ่งที่ผู้เข้าร่วมจะได้รับ">อัปเดตประเด็นสำคัญที่เภสัชกรขึ้นทะเบียนผลิตภัณฑ์ไม่ควรพลาด พร้อมแนวทางปรับใช้ได้จริง</textarea></div><div class="field"><label>ภาพประกอบที่เกี่ยวข้อง <span class="hint">ช่วยเติมพื้นที่บนโปสเตอร์</span></label><label class="upload" for="illustrationFile"><span class="upload-icon">▧</span><span class="upload-text"><b>อัปโหลดภาพเวกเตอร์ SVG</b><small>รับเฉพาะไอคอนหรือลายเส้น SVG</small><span class="uploaded" id="illustrationUploaded"></span></span><input id="illustrationFile" type="file" accept="image/svg+xml,.svg"></label></div><div class="image-search-row"><button type="button" class="btn" id="searchImageBtn">↻ ค้นหารูปใหม่</button><span id="imageSearchStatus" class="image-search-status" role="status" aria-live="polite">พิมพ์บรีฟภาพในธีม ระบบจะค้นหาไอคอนเส้น SVG ให้อัตโนมัติ</span></div>
 <div class="section"><span class="num">02</span> วัน เวลา และสถานที่</div>
 <div id="eventDates"></div><button type="button" class="btn" id="addEventDate" style="margin:-2px 0 14px">＋ เพิ่มวันจัดงาน</button><div id="dateWarning" class="date-warning" role="status"></div>
 <div class="grid"><div class="field"><label for="venue">สถานที่ / รูปแบบ</label><input id="venue" type="text" placeholder="เช่น โรงแรม... / Online" value="โรงแรม เอเชีย กรุงเทพฯ"></div><div class="field"><label for="deadline">ปิดรับสมัคร</label><input id="deadline" type="date" value="2026-12-12"></div></div>
@@ -41,82 +41,12 @@ const $=id=>document.getElementById(id);let qrSrc='',illustrationSrc='',autoIllu
 function fmtDate(v){if(!v)return 'รอระบุวันที่';const d=new Date(v+'T00:00:00');return new Intl.DateTimeFormat('th-TH',{day:'numeric',month:'short',year:'numeric'}).format(d)}
 function formatEventDates(days){const items=days.filter(d=>d.date).map(d=>({date:new Date(d.date+'T00:00:00'),time:(d.time||'').trim()})).sort((a,b)=>a.date-b.date);if(!items.length)return 'รอระบุวันที่';const parts=d=>{const p=new Intl.DateTimeFormat('th-TH',{day:'numeric',month:'short',year:'numeric'}).formatToParts(d);return {day:p.find(x=>x.type==='day').value,month:p.find(x=>x.type==='month').value,year:p.find(x=>x.type==='year').value}};const groups=[];for(const item of items){const prev=groups[groups.length-1];const next=prev&&new Date(prev.end.date.getTime()+86400000);if(prev&&prev.time===item.time&&next.toDateString()===item.date.toDateString())prev.end=item;else groups.push({start:item,end:item,time:item.time})}return groups.map(g=>{const a=parts(g.start.date),b=parts(g.end.date);let range;if(g.start.date.toDateString()===g.end.date.toDateString())range=`${a.day} ${a.month} ${a.year}`;else if(a.year===b.year&&a.month===b.month)range=`${a.day}–${b.day} ${b.month} ${b.year}`;else if(a.year===b.year)range=`${a.day} ${a.month}–${b.day} ${b.month} ${b.year}`;else range=`${a.day} ${a.month} ${a.year}–${b.day} ${b.month} ${b.year}`;return g.time?`${range} • ${g.time}`:range}).join(' / ')}
 function val(id,fallback=''){return $(id).value.trim()||fallback}
-function imageStatus(message, pageTitle='', pageUrl=''){
- const box=$('imageSearchStatus');box.replaceChildren(document.createTextNode(message));
- if(pageTitle&&pageUrl){const a=document.createElement('a');a.href=pageUrl;a.target='_blank';a.rel='noopener noreferrer';a.textContent=' '+pageTitle;box.append(a)}
-}
-function fetchWithTimeout(url,options,parentSignal,ms){
- return new Promise((resolve,reject)=>{
-  const controller=new AbortController();let timedOut=false;const abortFromParent=()=>controller.abort();
-  parentSignal.addEventListener('abort',abortFromParent,{once:true});const timer=setTimeout(()=>{timedOut=true;controller.abort()},ms);
-  fetch(url,{...options,signal:controller.signal}).then(resolve).catch(error=>reject(timedOut?new Error('การค้นหาภาพใช้เวลานานเกินไป'):error)).finally(()=>{clearTimeout(timer);parentSignal.removeEventListener('abort',abortFromParent)})
- })
-}
-function blobAsDataUrl(blob){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(reader.error||new Error('อ่านภาพไม่สำเร็จ'));reader.readAsDataURL(blob)})}
-function plainMetadata(value){const box=document.createElement('textarea');box.innerHTML=(value||'').replace(/<[^>]*>/g,' ');return (box.value||'').replace(/\s+/g,' ').trim().slice(0,100)}
-async function translateImageQuery(text,signal){
- if(!/[\u0E00-\u0E7F]/.test(text))return text;
- try{
-  const params=new URLSearchParams({client:'gtx',sl:'th',tl:'en',dt:'t',q:text.slice(0,180)});
-  const response=await fetchWithTimeout('https://translate.googleapis.com/translate_a/single?'+params.toString(),{},signal,4000);
-  if(!response.ok)return text;
-  const data=await response.json(),translated=(data[0]||[]).map(part=>part[0]||'').join(' ').trim();
-  return translated||text;
- }catch(error){if(error.name==='AbortError')throw error;return text}
-}
-function imageSearchTerms(text){
- const stop=new Set(['picture','pictures','photo','photos','photograph','photography','image','images','illustration','illustrations','want','looking','please','show','for','with','and','or','the','a','an','of','about','poster','theme','background','realistic','colorful','colourful','beautiful','related','vector','icon','icons','drawing','drawings','svg','line']);
- const words=(text.toLowerCase().match(/[a-z0-9]+/g)||[]).filter(word=>word.length>2&&!stop.has(word));
- const core=words.join(' ').trim(),tail=words.slice(-4).join(' ').trim(),last=words.slice(-1)[0]||'';
- return [...new Set([core+' vector icon',core+' line drawing',core+' SVG icon',tail+' vector icon',last+' icon'].filter(x=>x.trim().length>4))];
-}
-function noAttributionLicense(info){
- const label=plainMetadata(info.extmetadata&&info.extmetadata.LicenseShortName&&info.extmetadata.LicenseShortName.value).toLowerCase();
- return /cc\s?0|public domain|pdm/.test(label);
-}
-async function commonsVectorSearch(query,signal,page=1){
- const params=new URLSearchParams({action:'query',format:'json',formatversion:'2',origin:'*',generator:'search',gsrsearch:query+' filemime:image/svg+xml',gsrnamespace:'6',gsrlimit:'12',gsroffset:String((page-1)*12),prop:'imageinfo',iiprop:'url|mime|extmetadata',iiurlwidth:'1000',iiextmetadatafilter:'Artist|Credit|LicenseShortName'});
- const response=await fetchWithTimeout('https://commons.wikimedia.org/w/api.php?'+params.toString(),{},signal,6000);
- if(!response.ok)throw new Error('เชื่อมต่อคลังภาพเวกเตอร์ไม่สำเร็จ');
- return response.json()
-}
-async function searchThemeImage(nextPage=false){
- const query=val('themeBrief','');
- if(illustrationSrc){imageStatus('กำลังใช้ภาพที่อัปโหลดไว้');return}
- if(!query){imageStatus('ใส่รายละเอียดภาพในช่องธีม แล้วระบบจะค้นหารูปให้อัตโนมัติ');return}
- if(imageSearchController)imageSearchController.abort();
- const controller=new AbortController();imageSearchController=controller;const request=++imageSearchRequest;
- const previous={src:autoIllustrationSrc,credit:imageCreditText,url:imageSourceUrl,external:imageIsExternal};
- imageSearchOffset=nextPage?imageSearchOffset+1:1;
- imageStatus('กำลังแปลบรีฟและค้นหาเวกเตอร์ฟรีจาก Wikimedia Commons…');
- try{
-  const englishQuery=await translateImageQuery(query,controller.signal),terms=imageSearchTerms(englishQuery);let selected=null,selectedInfo=null;
-  for(const term of terms){
-   imageStatus('กำลังค้นหาไอคอน/ลายเส้น: '+term.slice(0,80));
-   const data=await commonsVectorSearch(term,controller.signal,imageSearchOffset);
-   const pages=(data.query&&data.query.pages)||[];
-   selected=pages.find(page=>{const info=page.imageinfo&&page.imageinfo[0];if(!info||info.mime!=='image/svg+xml'||!info.thumburl||!noAttributionLicense(info))return false;selectedInfo=info;return true});
-   if(selected)break;
-  }
-  if(!selected)throw new Error('ยังไม่พบเวกเตอร์ CC0 หรือ Public Domain ที่ตรงกับบรีฟ');
-  const info=selectedInfo,thumbUrl=info.thumburl,license=plainMetadata(info.extmetadata&&info.extmetadata.LicenseShortName&&info.extmetadata.LicenseShortName.value)||'Public Domain';
-  imageStatus('พบภาพเวกเตอร์ฟรี ('+license+') กำลังจัดวาง…');
-  let imageData=thumbUrl,external=true;
-  try{const imageResponse=await fetchWithTimeout(thumbUrl,{mode:'cors'},controller.signal,3500);if(imageResponse.ok){imageData=await blobAsDataUrl(await imageResponse.blob());external=false}}
-  catch(error){if(error.name==='AbortError'&&request!==imageSearchRequest)throw error}
-  if(request!==imageSearchRequest)return;
-  const title=(selected.title||'ภาพประกอบเวกเตอร์').replace(/^File:/,'').replace(/_/g,' ').slice(0,90);
-  const sourceUrl=selected.canonicalurl||('https://commons.wikimedia.org/wiki/'+encodeURIComponent(selected.title.replace(/ /g,'_')));
-  autoIllustrationSrc=imageData;imageIsExternal=external;imageCreditText=title+' · '+license;imageSourceUrl=sourceUrl;
-  imageStatus('ใช้ภาพเวกเตอร์ '+license+' จากคลังภาพ:',title,sourceUrl);update();
- }catch(error){
-  if(error.name==='AbortError'||request!==imageSearchRequest)return;
-  if(previous.src){autoIllustrationSrc=previous.src;imageIsExternal=previous.external;imageCreditText=previous.credit;imageSourceUrl=previous.url;imageStatus(error.message+' — คงภาพก่อนหน้าไว้')}
-  else{autoIllustrationSrc='';imageIsExternal=false;imageCreditText='';imageSourceUrl='';imageStatus(error.message+' — ใช้ภาพวาดสำรอง')}
-  update();
- }
-}
-
+function imageStatus(message){$('imageSearchStatus').textContent=message}
+function fetchWithTimeout(url,options,parentSignal,ms){return new Promise((resolve,reject)=>{const controller=new AbortController();let timedOut=false;const abortFromParent=()=>controller.abort();parentSignal.addEventListener('abort',abortFromParent,{once:true});const timer=setTimeout(()=>{timedOut=true;controller.abort()},ms);fetch(url,{...options,signal:controller.signal}).then(resolve).catch(error=>reject(timedOut?new Error('การค้นหาไอคอนใช้เวลานานเกินไป'):error)).finally(()=>{clearTimeout(timer);parentSignal.removeEventListener('abort',abortFromParent)})})}
+async function translateImageQuery(text,signal){if(!/[\u0E00-\u0E7F]/.test(text))return text;try{const params=new URLSearchParams({client:'gtx',sl:'th',tl:'en',dt:'t',q:text.slice(0,180)});const response=await fetchWithTimeout('https://translate.googleapis.com/translate_a/single?'+params.toString(),{},signal,4000);if(!response.ok)return text;const data=await response.json(),translated=(data[0]||[]).map(part=>part[0]||'').join(' ').trim();return translated||text}catch(error){if(error.name==='AbortError')throw error;return text}}
+function imageSearchTerms(text){const stop=new Set(['picture','pictures','photo','photos','photograph','photography','image','images','illustration','illustrations','want','looking','please','show','for','with','and','or','the','a','an','of','about','poster','theme','background','realistic','colorful','colourful','beautiful','related','vector','icon','icons','drawing','drawings','svg','line','blue','navy','green','gold','purple','red','black','white','modern','professional','formal','clean','minimal','style','design','association','event','related','pharmacy','regulatory','affairs']);const words=(text.toLowerCase().match(/[a-z0-9]+/g)||[]).filter(word=>word.length>2&&!stop.has(word));const core=words.join(' ').trim(),tail=words.slice(-3).join(' ').trim(),last=words.slice(-1)[0]||'';return [...new Set([core,tail,last].filter(x=>x.length>2))]}
+async function tablerIconSearch(query,signal,start=0){const params=new URLSearchParams({query,prefix:'tabler',limit:'64',start:String(start)});const response=await fetchWithTimeout('https://api.iconify.design/search?'+params.toString(),{},signal,6500);if(!response.ok)throw new Error('เชื่อมต่อคลังไอคอนเวกเตอร์ไม่สำเร็จ');return response.json()}
+async function searchThemeImage(nextPage=false){const query=val('themeBrief','');if(illustrationSrc){imageStatus('กำลังใช้ไฟล์ SVG ที่อัปโหลดไว้');return}if(!query){imageStatus('ใส่รายละเอียดภาพในช่องธีม แล้วระบบจะหาไอคอนเส้นให้');return}if(imageSearchController)imageSearchController.abort();const controller=new AbortController();imageSearchController=controller;const request=++imageSearchRequest;const previous={src:autoIllustrationSrc,external:imageIsExternal};imageSearchOffset=nextPage?imageSearchOffset+1:0;imageStatus('กำลังแปลบรีฟและค้นหาไอคอนเส้น SVG…');try{const englishQuery=await translateImageQuery(query,controller.signal),terms=imageSearchTerms(englishQuery);let iconName='';for(const term of terms){imageStatus('กำลังค้นหาไอคอนเส้น SVG: '+term.slice(0,80));const data=await tablerIconSearch(term,controller.signal,imageSearchOffset*32);iconName=(data.icons||[]).find(name=>/^tabler:[a-z0-9-]+$/.test(name))||'';if(iconName)break}if(request!==imageSearchRequest)return;if(!iconName)throw new Error('ยังไม่พบไอคอนที่ตรงกับบรีฟ');const icon=iconName.slice('tabler:'.length),color=getComputedStyle($('poster')).getPropertyValue('--theme').trim()||'#1459d9';autoIllustrationSrc='https://api.iconify.design/tabler/'+icon+'.svg?color='+encodeURIComponent(color);imageIsExternal=true;imageCreditText='';imageSourceUrl='';imageStatus('เพิ่มภาพไอคอนเส้น SVG ที่ตรงกับบรีฟแล้ว');update()}catch(error){if(error.name==='AbortError'||request!==imageSearchRequest)return;if(previous.src){autoIllustrationSrc=previous.src;imageIsExternal=previous.external;imageCreditText='';imageSourceUrl='';imageStatus('ค้นหาไอคอนไม่สำเร็จ จึงคงภาพเวกเตอร์ก่อนหน้าไว้')}else{autoIllustrationSrc='';imageIsExternal=false;imageCreditText='';imageSourceUrl='';imageStatus(error.message+' — ใช้ภาพวาดเวกเตอร์สำรอง')}update()}}
 function makeIllustration(prompt){
  const t=prompt.toLowerCase(),p=$('poster'),a=getComputedStyle(p).getPropertyValue('--theme').trim()||'#1459d9',b=getComputedStyle(p).getPropertyValue('--theme2').trim()||'#11a99a';
  let motif;
@@ -171,7 +101,7 @@ document.querySelectorAll('input,textarea').forEach(el=>el.addEventListener('inp
 function fileInput(id,key,labelId){$(id).addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const reader=new FileReader();reader.onload=()=>{qrSrc=reader.result;$(labelId).textContent='เลือกแล้ว: '+f.name;$(labelId).style.display='block';update()};reader.readAsDataURL(f)})}fileInput('qrFile','qrSrc','qrUploaded');
 function renderEventDates(){const box=$('eventDates');box.innerHTML=eventDays.map((d,i)=>`<div class="grid event-date-row"><div class="field"><label>วันที่ ${i+1}</label><input type="date" data-event-date="${i}" value="${d.date}"></div><div class="field"><label>เวลา</label><div style="display:flex;gap:6px"><input type="text" data-event-time="${i}" placeholder="เช่น 09:00–16:00 น." value="${escapeHtml(d.time)}">${i?`<button type="button" class="btn" data-remove-date="${i}">ลบ</button>`:''}</div></div></div>`).join('');box.querySelectorAll('[data-event-date]').forEach(x=>x.oninput=()=>{eventDays[+x.dataset.eventDate].date=x.value;update()});box.querySelectorAll('[data-event-time]').forEach(x=>x.oninput=()=>{eventDays[+x.dataset.eventTime].time=x.value;update()});box.querySelectorAll('[data-remove-date]').forEach(x=>x.onclick=()=>{eventDays.splice(+x.dataset.removeDate,1);renderEventDates();update()})}
 $('addEventDate').onclick=()=>{eventDays.push({date:'',time:''});renderEventDates();update()};renderEventDates();
-$('illustrationFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{illustrationSrc=r.result;imageIsExternal=false;$('illustrationUploaded').textContent='เลือกแล้ว: '+f.name;$('illustrationUploaded').style.display='block';update()};r.readAsDataURL(f)};
+$('illustrationFile').onchange=e=>{const f=e.target.files[0];if(!f)return;if(!/\.svg$/i.test(f.name)||f.type&&f.type!=='image/svg+xml'){toast('กรุณาเลือกไฟล์ SVG เท่านั้น');e.target.value='';return}const reader=new FileReader();reader.onload=()=>{const svg=String(reader.result||'');if(!/<svg[\s>]/i.test(svg)||/<(?:image|foreignObject|script|iframe|object|embed)\b/i.test(svg)||/\b(?:href|src)\s*=\s*[\"']\s*(?:https?:|data:image)/i.test(svg)||/url\s*\(/i.test(svg)){toast('ไฟล์นี้ไม่ใช่ภาพเวกเตอร์ล้วน กรุณาเลือก SVG แบบไอคอน/ลายเส้น');e.target.value='';return}illustrationSrc='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);autoIllustrationSrc='';imageIsExternal=false;imageCreditText='';imageSourceUrl='';$('illustrationUploaded').textContent='เลือกแล้ว: '+f.name;$('illustrationUploaded').style.display='block';update()};reader.readAsText(f)};
 function renderSpeakerFields(){const box=$('speakerFields');box.innerHTML=speakers.map((sp,i)=>`<div class="subbox speaker-form"><div class="grid"><div class="field"><label>ชื่อวิทยากร ${i+1}</label><input type="text" data-speaker-name="${i}" placeholder="ชื่อ-นามสกุล" value="${escapeHtml(sp.name)}"></div><div class="field"><label>ตำแหน่ง / หน่วยงาน</label><input type="text" data-speaker-role="${i}" placeholder="ถ้ามี" value="${escapeHtml(sp.role)}"></div></div><div class="field"><label>รูปวิทยากร</label><label class="upload"><span class="upload-icon">↑</span><span class="upload-text"><b>${sp.image?'เลือกรูปแล้ว':'คลิกเพื่อเลือกรูปภาพ'}</b><small>PNG หรือ JPG</small></span><input type="file" data-speaker-image="${i}" accept="image/*"></label>${i>0?`<button type="button" class="btn" data-remove-speaker="${i}">ลบวิทยากร</button>`:''}</div></div>`).join('');box.querySelectorAll('[data-speaker-name]').forEach(x=>x.oninput=()=>{speakers[+x.dataset.speakerName].name=x.value;update()});box.querySelectorAll('[data-speaker-role]').forEach(x=>x.oninput=()=>{speakers[+x.dataset.speakerRole].role=x.value;update()});box.querySelectorAll('[data-speaker-image]').forEach(x=>x.onchange=()=>{const f=x.files[0];if(!f)return;const reader=new FileReader();reader.onload=()=>{speakers[+x.dataset.speakerImage].image=reader.result;renderSpeakerFields();update()};reader.readAsDataURL(f)});box.querySelectorAll('[data-remove-speaker]').forEach(x=>x.onclick=()=>{speakers.splice(+x.dataset.removeSpeaker,1);renderSpeakerFields();update()})}
 function renderSpeakers(){$('pSpeakers').innerHTML=speakers.filter(x=>x.name.trim()).map(sp=>`<div class="speaker-card"><div class="speaker-photo speaker-initial" style="${sp.image?`background-image:url('${sp.image}');background-size:cover;background-position:center`:''}">${sp.image?'':escapeHtml(speakerInitial(sp.name))}</div><div class="speaker-meta"><div class="speaker-name">${escapeHtml(sp.name)}</div><div class="speaker-role">${escapeHtml(sp.role)}</div></div></div>`).join('')}
 $('addSpeakerBtn').onclick=()=>{speakers.push({name:'',role:'',image:''});renderSpeakerFields();update()};renderSpeakerFields();
