@@ -17,7 +17,7 @@
 <main class="wrap"><div class="intro"><div class="eyebrow">EVENT DESIGN, MADE EASY</div><h1>สร้างโปสเตอร์กิจกรรมของสมาคม</h1><p>กรอกรายละเอียดงาน เพิ่มรูปวิทยากรและ QR Code แล้วดาวน์โหลดโปสเตอร์ได้ทันที</p></div>
 <div class="layout"><section class="panel form-panel"><div class="panel-head"><h2>รายละเอียดกิจกรรม</h2><span class="step">กรอกข้อมูลเพื่อดูตัวอย่าง</span></div>
 <div class="section"><span class="num">01</span> ข้อมูลงานและวิทยากร</div>
-<div class="field"><label for="themeBrief">ธีมโปสเตอร์ <span class="hint">สีและภาพประกอบที่ต้องการ</span></label><textarea id="themeBrief" placeholder="เช่น โทนน้ำเงินกรมท่ากับทอง ดูเป็นทางการ มีลายเส้นกราฟการเงินหรือภาพเมืองทันสมัย">โทนน้ำเงินและเขียว ดูทันสมัย สื่อถึงความรู้และวิชาชีพ</textarea><div class="hint" style="margin:6px 2px 0;display:block">ระบุสีและภาพด้วยภาษาธรรมชาติ ระบบจะค้นหารูปให้จากคลังภาพ Openverse</div></div>
+<div class="field"><label for="themeBrief">ธีมโปสเตอร์ <span class="hint">สีและภาพประกอบที่ต้องการ</span></label><textarea id="themeBrief" placeholder="เช่น โทนน้ำเงินกรมท่ากับทอง ดูเป็นทางการ มีลายเส้นกราฟการเงินหรือภาพเมืองทันสมัย">โทนน้ำเงินและเขียว ดูทันสมัย สื่อถึงความรู้และวิชาชีพ</textarea><div class="hint" style="margin:6px 2px 0;display:block">พิมพ์บรีฟเป็นไทยหรืออังกฤษ ระบบแปลคำค้นและหารูปจาก Openverse อัตโนมัติ</div></div>
 <div class="field"><label for="title">ชื่องาน</label><input id="title" type="text" placeholder="เช่น ก้าวทันมาตรฐานการขึ้นทะเบียน" value="ก้าวทันมาตรฐานการขึ้นทะเบียน" /></div>
 <div id="speakerFields"></div><button type="button" class="btn" id="addSpeakerBtn" style="margin:-2px 0 14px">＋ เพิ่มวิทยากร</button>
 <div class="field"><label for="copy">คำโฆษณา / รายละเอียดสั้น ๆ</label><textarea id="copy" placeholder="บอกจุดเด่นหรือสิ่งที่ผู้เข้าร่วมจะได้รับ">อัปเดตประเด็นสำคัญที่เภสัชกรขึ้นทะเบียนผลิตภัณฑ์ไม่ควรพลาด พร้อมแนวทางปรับใช้ได้จริง</textarea></div><div class="field"><label>ภาพประกอบที่เกี่ยวข้อง <span class="hint">ช่วยเติมพื้นที่บนโปสเตอร์</span></label><label class="upload" for="illustrationFile"><span class="upload-icon">▧</span><span class="upload-text"><b>อัปโหลดภาพประกอบ</b><small>เช่น ยา ห้องปฏิบัติการ หรือภาพที่เข้ากับธีม</small><span class="uploaded" id="illustrationUploaded"></span></span><input id="illustrationFile" type="file" accept="image/*"></label></div><div class="image-search-row"><button type="button" class="btn" id="searchImageBtn">↻ ค้นหารูปใหม่</button><span id="imageSearchStatus" class="image-search-status" role="status" aria-live="polite">พิมพ์บรีฟภาพในธีม ระบบจะค้นหารูปที่ตรงให้โดยอัตโนมัติ</span></div>
@@ -51,6 +51,22 @@ function syncPosterImageCredit(){
  if(autoIllustrationSrc&&!illustrationSrc&&imageCreditText&&imageSourceUrl){link.textContent=imageCreditText;link.href=imageSourceUrl;link.style.display='block'}
  else{link.textContent='';link.removeAttribute('href');link.style.display='none'}
 }
+async function translateImageQuery(text,signal){
+ if(!/[\u0E00-\u0E7F]/.test(text))return text;
+ try{
+  const params=new URLSearchParams({client:'gtx',sl:'th',tl:'en',dt:'t',q:text.slice(0,180)});
+  const response=await fetch('https://translate.googleapis.com/translate_a/single?'+params.toString(),{signal});
+  if(!response.ok)return text;
+  const data=await response.json(),translated=(data[0]||[]).map(part=>part[0]||'').join(' ').trim();
+  return translated||text;
+ }catch(error){if(error.name==='AbortError')throw error;return text}
+}
+async function openverseSearch(query,page,signal){
+ const params=new URLSearchParams({q:query,license_type:'commercial',extension:'jpg,jpeg,png',page_size:'8',page:String(page),mature:'false',filter_dead:'true'});
+ const response=await fetch('https://api.openverse.org/v1/images/?'+params.toString(),{signal});
+ if(!response.ok)throw new Error(response.status===429?'คลังภาพกำลังถูกใช้งานมาก ลองใหม่อีกสักครู่':'เชื่อมต่อคลังภาพไม่สำเร็จ');
+ return response.json()
+}
 async function searchThemeImage(nextPage=false){
  const query=val('themeBrief','');
  if(illustrationSrc){imageStatus('กำลังใช้ภาพที่อัปโหลดไว้');return}
@@ -59,21 +75,21 @@ async function searchThemeImage(nextPage=false){
  const controller=new AbortController();imageSearchController=controller;const request=++imageSearchRequest;
  const previous={src:autoIllustrationSrc,credit:imageCreditText,url:imageSourceUrl};
  imageSearchOffset=nextPage?imageSearchOffset+1:1;
- imageStatus('กำลังค้นหารูปที่ตรงกับบรีฟจาก Openverse…');
- const params=new URLSearchParams({q:query.slice(0,180),license_type:'commercial',extension:'jpg,jpeg,png',page_size:'8',page:String(imageSearchOffset),mature:'false',filter_dead:'true'});
+ imageStatus('กำลังค้นหารูปจากบรีฟในคลัง Openverse…');
  try{
-  const response=await fetch('https://api.openverse.org/v1/images/?'+params.toString(),{signal:controller.signal});
-  if(!response.ok)throw new Error(response.status===429?'คลังภาพกำลังถูกใช้งานมาก ลองใหม่อีกสักครู่':'เชื่อมต่อคลังภาพไม่สำเร็จ');
-  const data=await response.json(),items=data.results||[];
-  const result=items.find(item=>item.thumbnail);
+  const englishQuery=await translateImageQuery(query,controller.signal);
+  let data=await openverseSearch(englishQuery,imageSearchOffset,controller.signal);
+  let result=(data.results||[]).find(item=>item.thumbnail);
+  if(!result&&englishQuery!==query){data=await openverseSearch(query,imageSearchOffset,controller.signal);result=(data.results||[]).find(item=>item.thumbnail)}
   if(!result)throw new Error('ยังไม่พบภาพที่ตรงกับบรีฟ');
-  const imageResponse=await fetch(result.thumbnail,{mode:'cors',signal:controller.signal});
+  const thumbUrl=result.id?'https://api.openverse.org/v1/images/'+encodeURIComponent(result.id)+'/thumb/':result.thumbnail;
+  const imageResponse=await fetch(thumbUrl,{mode:'cors',signal:controller.signal});
   if(!imageResponse.ok)throw new Error('ดาวน์โหลดภาพจากคลังไม่สำเร็จ');
   const imageData=await blobAsDataUrl(await imageResponse.blob());
   if(request!==imageSearchRequest)return;
   const title=(result.title||'ภาพประกอบ').replace(/\s+/g,' ').trim().slice(0,90);
   const creator=(result.creator||'ไม่ระบุผู้สร้าง').replace(/\s+/g,' ').trim().slice(0,70);
-  const license=(result.license||'open license').toUpperCase().replace('PDM','PUBLIC DOMAIN MARK')+(result.license_version?' '+result.license_version:'');
+  const license=(result.license||'open license').toUpperCase()+(result.license_version?' '+result.license_version:'');
   autoIllustrationSrc=imageData;imageCreditText='ภาพ: '+title+' · '+creator+' · '+license+' · Openverse';
   imageSourceUrl=result.foreign_landing_url||result.url||result.detail_url;
   imageStatus('พบภาพประกอบจาก Openverse:',title,imageSourceUrl);update();
@@ -142,7 +158,7 @@ $('illustrationFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const 
 function renderSpeakerFields(){const box=$('speakerFields');box.innerHTML=speakers.map((sp,i)=>`<div class="subbox speaker-form"><div class="grid"><div class="field"><label>ชื่อวิทยากร ${i+1}</label><input type="text" data-speaker-name="${i}" placeholder="ชื่อ-นามสกุล" value="${escapeHtml(sp.name)}"></div><div class="field"><label>ตำแหน่ง / หน่วยงาน</label><input type="text" data-speaker-role="${i}" placeholder="ถ้ามี" value="${escapeHtml(sp.role)}"></div></div><div class="field"><label>รูปวิทยากร</label><label class="upload"><span class="upload-icon">↑</span><span class="upload-text"><b>${sp.image?'เลือกรูปแล้ว':'คลิกเพื่อเลือกรูปภาพ'}</b><small>PNG หรือ JPG</small></span><input type="file" data-speaker-image="${i}" accept="image/*"></label>${i>0?`<button type="button" class="btn" data-remove-speaker="${i}">ลบวิทยากร</button>`:''}</div></div>`).join('');box.querySelectorAll('[data-speaker-name]').forEach(x=>x.oninput=()=>{speakers[+x.dataset.speakerName].name=x.value;update()});box.querySelectorAll('[data-speaker-role]').forEach(x=>x.oninput=()=>{speakers[+x.dataset.speakerRole].role=x.value;update()});box.querySelectorAll('[data-speaker-image]').forEach(x=>x.onchange=()=>{const f=x.files[0];if(!f)return;const reader=new FileReader();reader.onload=()=>{speakers[+x.dataset.speakerImage].image=reader.result;renderSpeakerFields();update()};reader.readAsDataURL(f)});box.querySelectorAll('[data-remove-speaker]').forEach(x=>x.onclick=()=>{speakers.splice(+x.dataset.removeSpeaker,1);renderSpeakerFields();update()})}
 function renderSpeakers(){$('pSpeakers').innerHTML=speakers.filter(x=>x.name.trim()).map(sp=>`<div class="speaker-card"><div class="speaker-photo speaker-initial" style="${sp.image?`background-image:url('${sp.image}');background-size:cover;background-position:center`:''}">${sp.image?'':escapeHtml(speakerInitial(sp.name))}</div><div class="speaker-meta"><div class="speaker-name">${escapeHtml(sp.name)}</div><div class="speaker-role">${escapeHtml(sp.role)}</div></div></div>`).join('')}
 $('addSpeakerBtn').onclick=()=>{speakers.push({name:'',role:'',image:''});renderSpeakerFields();update()};renderSpeakerFields();
-$('resetBtn').onclick=()=>{if(!confirm('ล้างข้อมูลทั้งหมดหรือไม่?'))return;document.querySelectorAll('input[type=text],textarea').forEach(x=>x.value='');document.querySelectorAll('input[type=date]').forEach(x=>x.value='');eventDays=[{date:'',time:''}];renderEventDates();illustrationSrc='';autoIllustrationSrc='';imageCreditText='';imageSourceUrl='';clearTimeout(imageSearchTimer);if(imageSearchController)imageSearchController.abort();imageStatus('พิมพ์บรีฟภาพในธีม ระบบจะค้นหารูปที่ตรงให้โดยอัตโนมัติ');imageStatus('พิมพ์บรีฟภาพในธีม ระบบจะค้นหารูปที่ตรงให้โดยอัตโนมัติ');$('illustrationFile').value='';$('illustrationUploaded').style.display='none';$('qrFile').value='';$('qrUploaded').style.display='none';speakers=[{name:'',role:'',image:''}];qrSrc='';renderSpeakerFields();$('cpeToggle').checked=false;$('memberFreeToggle').checked=false;document.querySelector('input[name="priceMode"][value="two"]').checked=true;update();toast('ล้างรายละเอียดแล้ว')};
+$('resetBtn').onclick=()=>{if(!confirm('ล้างข้อมูลทั้งหมดหรือไม่?'))return;document.querySelectorAll('input[type=text],textarea').forEach(x=>x.value='');document.querySelectorAll('input[type=date]').forEach(x=>x.value='');eventDays=[{date:'',time:''}];renderEventDates();illustrationSrc='';autoIllustrationSrc='';imageCreditText='';imageSourceUrl='';clearTimeout(imageSearchTimer);if(imageSearchController)imageSearchController.abort();imageStatus('พิมพ์บรีฟภาพในธีม ระบบจะค้นหารูปที่ตรงให้โดยอัตโนมัติ');imageStatus('พิมพ์บรีฟภาพในธีม ระบบจะค้นหารูปที่ตรงให้โดยอัตโนมัติ');imageStatus('พิมพ์บรีฟภาพในธีม ระบบจะค้นหารูปที่ตรงให้โดยอัตโนมัติ');$('illustrationFile').value='';$('illustrationUploaded').style.display='none';$('qrFile').value='';$('qrUploaded').style.display='none';speakers=[{name:'',role:'',image:''}];qrSrc='';renderSpeakerFields();$('cpeToggle').checked=false;$('memberFreeToggle').checked=false;document.querySelector('input[name="priceMode"][value="two"]').checked=true;update();toast('ล้างรายละเอียดแล้ว')};
 $('printBtn').onclick=$('pdfBtn').onclick=()=>window.print();$('downloadJpgBtn').onclick=async()=>{try{if(document.fonts&&document.fonts.ready)await document.fonts.ready;const canvas=await htmlToCanvas($('poster'),1080);const a=document.createElement('a');a.download='RAPAT-event-poster.jpg';a.href=canvas.toDataURL('image/jpeg',0.94);a.click();toast('ดาวน์โหลด JPG แล้ว')}catch(e){console.error('JPG export failed:',e);toast('ดาวน์โหลด JPG ไม่สำเร็จ')}};
 function toast(s){const t=$('toast');t.textContent=s;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2300)}
 async function htmlToCanvas(el,width){if(!window.html2canvas)throw new Error('html2canvas library failed to load');await document.fonts.ready;return window.html2canvas(el,{scale:width/el.getBoundingClientRect().width,backgroundColor:'#ffffff',useCORS:true,allowTaint:false,logging:false})}
